@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/pedidos")
+@RequestMapping("/pedidos")
 @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
 public class PedidoControlador {
 

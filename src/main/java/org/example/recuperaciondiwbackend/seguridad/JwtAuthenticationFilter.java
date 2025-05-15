@@ -27,8 +27,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+
+        // Agregar logs de depuración
+        log.info("Request URI: {}", request.getRequestURI());
+        log.info("Context Path: {}", request.getContextPath());
+        log.info("Servlet Path: {}", request.getServletPath());
+
+
         try {
             String jwt = extraerJwt(request);
+
+            log.info("JWT extraído: {}", jwt != null ? "Presente" : "Ausente");
+
             if (StringUtils.hasText(jwt) && jwtTokenUtil.validarToken(jwt)) {
                 String email = jwtTokenUtil.obtenerEmailDelToken(jwt);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(email);
@@ -41,6 +51,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         } catch (Exception e) {
             log.error("No se pudo establecer la autenticación del usuario en el contexto de seguridad", e);
+            log.error("Error en filtro JWT: ", e);
         }
 
         filterChain.doFilter(request, response);
@@ -52,5 +63,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return bearerToken.substring(7);
         }
         return null;
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getServletPath();
+        return path.startsWith("/api/auth/") || path.startsWith("/auth/");
     }
 }

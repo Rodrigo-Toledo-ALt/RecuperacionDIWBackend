@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/carrito")
+@RequestMapping("/carrito")
 @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
 public class CarritoControlador {
 

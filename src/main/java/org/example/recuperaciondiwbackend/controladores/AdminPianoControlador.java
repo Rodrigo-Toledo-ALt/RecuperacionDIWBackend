@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/admin/pianos")
+@RequestMapping("/admin/pianos")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminPianoControlador {
 
