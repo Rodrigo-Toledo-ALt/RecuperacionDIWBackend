@@ -1,7 +1,7 @@
 package org.example.recuperaciondiwbackend.servicios;
 
-import org.example.recuperaciondiwbackend.dtos.EspecificacionDto;
-import org.example.recuperaciondiwbackend.dtos.PianoDto;
+import org.example.recuperaciondiwbackend.dtos.EspecificacionDTO;
+import org.example.recuperaciondiwbackend.dtos.PianoDTO;
 import org.example.recuperaciondiwbackend.modelos.Caracteristica;
 import org.example.recuperaciondiwbackend.modelos.Piano;
 import org.example.recuperaciondiwbackend.modelos.TipoEspecificacion;
@@ -49,7 +49,7 @@ public class PianoServicio {
     }
 
     @Transactional
-    public Piano guardarPiano(PianoDto pianoDto) {
+    public Piano guardarPiano(PianoDTO pianoDto) {
         Piano piano = new Piano();
         piano.setNombre(pianoDto.getNombre());
         piano.setModelo(pianoDto.getModelo());
@@ -82,7 +82,7 @@ public class PianoServicio {
     }
 
     @Transactional
-    public Piano actualizarPiano(Long id, PianoDto pianoDto) {
+    public Piano actualizarPiano(Long id, PianoDTO pianoDto) {
         Piano piano = pianoRepositorio.findById(id)
                 .orElseThrow(() -> new RuntimeException("Piano no encontrado"));
 
@@ -132,7 +132,7 @@ public class PianoServicio {
                 });
     }
 
-    private ValorEspecificacion obtenerOCrearValorEspecificacion(EspecificacionDto especificacionDto) {
+    private ValorEspecificacion obtenerOCrearValorEspecificacion(EspecificacionDTO especificacionDto) {
         TipoEspecificacion tipo = tipoEspecificacionRepositorio.findByNombre(especificacionDto.getTipo())
                 .orElseGet(() -> {
                     TipoEspecificacion nuevoTipo = new TipoEspecificacion();
@@ -149,8 +149,8 @@ public class PianoServicio {
                 });
     }
 
-    public PianoDto convertirADto(Piano piano) {
-        PianoDto dto = new PianoDto();
+    public PianoDTO convertirADto(Piano piano) {
+        PianoDTO dto = new PianoDTO();
         dto.setId(piano.getId());
         dto.setNombre(piano.getNombre());
         dto.setModelo(piano.getModelo());
@@ -168,8 +168,8 @@ public class PianoServicio {
         dto.setCaracteristicas(caracteristicas);
 
         // Convertir especificaciones
-        Set<EspecificacionDto> especificaciones = piano.getEspecificaciones().stream()
-                .map(ve -> new EspecificacionDto(ve.getTipo().getNombre(), ve.getValor()))
+        Set<EspecificacionDTO> especificaciones = piano.getEspecificaciones().stream()
+                .map(ve -> new EspecificacionDTO(ve.getTipo().getNombre(), ve.getValor()))
                 .collect(Collectors.toSet());
         dto.setEspecificaciones(especificaciones);
 

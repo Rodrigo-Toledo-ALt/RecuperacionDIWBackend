@@ -1,5 +1,9 @@
 package org.example.recuperaciondiwbackend.controladores;
 
+import jakarta.validation.Valid;
+import org.example.recuperaciondiwbackend.Utils.SecurityUtils;
+import org.example.recuperaciondiwbackend.dtos.pedidos.CrearPedidoRequest;
+import org.example.recuperaciondiwbackend.dtos.pedidos.PedidoResponse;
 import org.example.recuperaciondiwbackend.modelos.Pedido;
 import org.example.recuperaciondiwbackend.modelos.Usuario;
 import org.example.recuperaciondiwbackend.servicios.PedidoServicio;
@@ -19,22 +23,22 @@ import java.util.Map;
 public class PedidoControlador {
 
     private final PedidoServicio pedidoServicio;
-    private final UsuarioServicio usuarioServicio;
+    private final SecurityUtils securityUtils;
 
-    public PedidoControlador(PedidoServicio pedidoServicio, UsuarioServicio usuarioServicio) {
+    public PedidoControlador(PedidoServicio pedidoServicio, SecurityUtils securityUtils) {
         this.pedidoServicio = pedidoServicio;
-        this.usuarioServicio = usuarioServicio;
+        this.securityUtils = securityUtils;
     }
 
     @GetMapping
     public ResponseEntity<List<Pedido>> listarPedidosUsuario() {
-        Long usuarioId = obtenerUsuarioActual().getId();
+        Long usuarioId = securityUtils.obtenerIdUsuarioActual();
         return ResponseEntity.ok(pedidoServicio.listarPorUsuario(usuarioId));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Pedido> obtenerPedido(@PathVariable Long id) {
-        Long usuarioId = obtenerUsuarioActual().getId();
+        Long usuarioId = securityUtils.obtenerIdUsuarioActual();
         return pedidoServicio.buscarPorId(id)
                 .filter(pedido -> pedido.getUsuario().getId().equals(usuarioId))
                 .map(ResponseEntity::ok)
@@ -42,18 +46,13 @@ public class PedidoControlador {
     }
 
     @PostMapping
-    public ResponseEntity<Pedido> crearPedido(@RequestBody Map<String, String> datos) {
-        Long usuarioId = obtenerUsuarioActual().getId();
-        String direccionEnvio = datos.get("direccionEnvio");
-        String metodoPago = datos.get("metodoPago");
-        
-        return ResponseEntity.ok(pedidoServicio.crearPedidoDesdeCarrito(usuarioId, direccionEnvio, metodoPago));
-    }
-
-    private Usuario obtenerUsuarioActual() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String email = auth.getName();
-        return usuarioServicio.buscarPorEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+    public ResponseEntity<PedidoResponse> crearPedido(@Valid @RequestBody CrearPedidoRequest request) {
+        Long usuarioId = securityUtils.obtenerIdUsuarioActual();
+        Pedido pedido = pedidoServicio.crearPedidoDesdeCarrito(
+                usuarioId,
+                request.getDireccionEnvio(),
+                request.getMetodoPago()
+        );
+        return ResponseEntity.ok(PedidoResponse.fromPedido(pedido));
     }
 }

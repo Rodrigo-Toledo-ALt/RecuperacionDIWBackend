@@ -1,10 +1,10 @@
 package org.example.recuperaciondiwbackend.servicios;
 
 import lombok.RequiredArgsConstructor;
-import org.example.recuperaciondiwbackend.dtos.JwtResponse;
-import org.example.recuperaciondiwbackend.dtos.LoginRequest;
-import org.example.recuperaciondiwbackend.dtos.RefreshTokenRequest;
-import org.example.recuperaciondiwbackend.dtos.RegistroRequest;
+import org.example.recuperaciondiwbackend.dtos.auth.JwtResponseDTO;
+import org.example.recuperaciondiwbackend.dtos.auth.LoginRequestDTO;
+import org.example.recuperaciondiwbackend.dtos.auth.RefreshTokenRequestDTO;
+import org.example.recuperaciondiwbackend.dtos.auth.RegistroRequestDTO;
 import org.example.recuperaciondiwbackend.modelos.Usuario;
 import org.example.recuperaciondiwbackend.seguridad.JwtTokenUtil;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -23,22 +23,22 @@ public class AuthServicio {
     private final JwtTokenUtil jwtTokenUtil;
 
     @Transactional
-    public JwtResponse login(LoginRequest loginRequest) {
+    public JwtResponseDTO login(LoginRequestDTO loginRequestDTO) {
         // Autenticar al usuario
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getContrasena()));
+                new UsernamePasswordAuthenticationToken(loginRequestDTO.getEmail(), loginRequestDTO.getContrasena()));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtTokenUtil.generarToken(authentication);
 
-        Usuario usuario = usuarioServicio.buscarPorEmail(loginRequest.getEmail())
+        Usuario usuario = usuarioServicio.buscarPorEmail(loginRequestDTO.getEmail())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
         
         String refreshToken = jwtTokenUtil.generarRefreshToken(usuario);
         
-        usuarioServicio.actualizarUltimoLogin(loginRequest.getEmail());
+        usuarioServicio.actualizarUltimoLogin(loginRequestDTO.getEmail());
 
-        return JwtResponse.builder()
+        return JwtResponseDTO.builder()
                 .token(jwt)
                 .refreshToken(refreshToken)
                 .id(usuario.getId())
@@ -50,22 +50,22 @@ public class AuthServicio {
     }
 
     @Transactional
-    public JwtResponse registro(RegistroRequest registroRequest) {
+    public JwtResponseDTO registro(RegistroRequestDTO registroRequestDTO) {
         Usuario usuario = usuarioServicio.registrarUsuario(
-                registroRequest.getNombre(),
-                registroRequest.getEmail(),
-                registroRequest.getContrasena()
+                registroRequestDTO.getNombre(),
+                registroRequestDTO.getEmail(),
+                registroRequestDTO.getContrasena()
         );
         
         // Autenticar al usuario automáticamente
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(registroRequest.getEmail(), registroRequest.getContrasena()));
+                new UsernamePasswordAuthenticationToken(registroRequestDTO.getEmail(), registroRequestDTO.getContrasena()));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtTokenUtil.generarToken(authentication);
         String refreshToken = jwtTokenUtil.generarRefreshToken(usuario);
 
-        return JwtResponse.builder()
+        return JwtResponseDTO.builder()
                 .token(jwt)
                 .refreshToken(refreshToken)
                 .id(usuario.getId())
@@ -77,14 +77,14 @@ public class AuthServicio {
     }
     
     @Transactional
-    public JwtResponse refreshToken(RefreshTokenRequest refreshTokenRequest) {
+    public JwtResponseDTO refreshToken(RefreshTokenRequestDTO refreshTokenRequestDTO) {
         // Validar el refresh token
-        if (!jwtTokenUtil.validarToken(refreshTokenRequest.getRefreshToken())) {
+        if (!jwtTokenUtil.validarToken(refreshTokenRequestDTO.getRefreshToken())) {
             throw new RuntimeException("Refresh token inválido o expirado");
         }
         
         // Obtener el email del usuario a partir del token
-        String email = jwtTokenUtil.obtenerEmailDelToken(refreshTokenRequest.getRefreshToken());
+        String email = jwtTokenUtil.obtenerEmailDelToken(refreshTokenRequestDTO.getRefreshToken());
         
         // Obtener el usuario
         Usuario usuario = usuarioServicio.buscarPorEmail(email)
@@ -96,7 +96,7 @@ public class AuthServicio {
         String jwt = jwtTokenUtil.generarToken(authentication);
         String refreshToken = jwtTokenUtil.generarRefreshToken(usuario);
         
-        return JwtResponse.builder()
+        return JwtResponseDTO.builder()
                 .token(jwt)
                 .refreshToken(refreshToken)
                 .id(usuario.getId())
@@ -108,11 +108,11 @@ public class AuthServicio {
     }
     
     @Transactional
-    public Usuario registrarAdmin(RegistroRequest registroRequest) {
+    public Usuario registrarAdmin(RegistroRequestDTO registroRequestDTO) {
         return usuarioServicio.registrarAdmin(
-                registroRequest.getNombre(),
-                registroRequest.getEmail(),
-                registroRequest.getContrasena()
+                registroRequestDTO.getNombre(),
+                registroRequestDTO.getEmail(),
+                registroRequestDTO.getContrasena()
         );
     }
 }

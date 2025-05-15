@@ -1,5 +1,6 @@
 package org.example.recuperaciondiwbackend.controladores;
 
+import org.example.recuperaciondiwbackend.dtos.UsuarioDTO;
 import org.example.recuperaciondiwbackend.modelos.Usuario;
 import org.example.recuperaciondiwbackend.servicios.UsuarioServicio;
 import org.springframework.http.ResponseEntity;
@@ -21,23 +22,18 @@ public class AdminUsuarioControlador {
     }
 
     @GetMapping
-    public ResponseEntity<List<Usuario>> listarUsuarios() {
-        // Por seguridad, no devolvemos los hashes de contraseñas
-        List<Usuario> usuarios = usuarioServicio.listarTodos().stream()
-                .peek(u -> u.setContrasenaHash(null))
+    public ResponseEntity<List<UsuarioDTO>> listarUsuarios() {
+        List<UsuarioDTO> usuariosDTO = usuarioServicio.listarTodos().stream()
+                .map(UsuarioDTO::new)
                 .collect(Collectors.toList());
-        
-        return ResponseEntity.ok(usuarios);
+
+        return ResponseEntity.ok(usuariosDTO);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Usuario> obtenerUsuario(@PathVariable Long id) {
+    public ResponseEntity<UsuarioDTO> obtenerUsuario(@PathVariable Long id) {
         return usuarioServicio.buscarPorId(id)
-                .map(usuario -> {
-                    // Por seguridad, no devolvemos el hash de la contraseña
-                    usuario.setContrasenaHash(null);
-                    return ResponseEntity.ok(usuario);
-                })
+                .map(usuario -> ResponseEntity.ok(new UsuarioDTO(usuario)))
                 .orElse(ResponseEntity.notFound().build());
     }
 }

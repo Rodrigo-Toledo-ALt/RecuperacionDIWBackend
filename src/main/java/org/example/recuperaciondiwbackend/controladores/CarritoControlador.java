@@ -1,14 +1,15 @@
 package org.example.recuperaciondiwbackend.controladores;
 
-import org.example.recuperaciondiwbackend.dtos.MensajeResponse;
+import jakarta.validation.Valid;
+import org.example.recuperaciondiwbackend.Utils.SecurityUtils;
+import org.example.recuperaciondiwbackend.dtos.carrito.ActualizarCantidadRequest;
+import org.example.recuperaciondiwbackend.dtos.carrito.AgregarAlCarritoRequest;
+import org.example.recuperaciondiwbackend.dtos.MensajeResponseDTO;
+import org.example.recuperaciondiwbackend.dtos.carrito.CarritoResponse;
 import org.example.recuperaciondiwbackend.modelos.Carrito;
-import org.example.recuperaciondiwbackend.modelos.Usuario;
 import org.example.recuperaciondiwbackend.servicios.CarritoServicio;
-import org.example.recuperaciondiwbackend.servicios.UsuarioServicio;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,54 +21,46 @@ import java.util.Map;
 public class CarritoControlador {
 
     private final CarritoServicio carritoServicio;
-    private final UsuarioServicio usuarioServicio;
+    private final SecurityUtils securityUtils;
 
-    public CarritoControlador(CarritoServicio carritoServicio, UsuarioServicio usuarioServicio) {
+    public CarritoControlador(CarritoServicio carritoServicio, SecurityUtils securityUtils) {
         this.carritoServicio = carritoServicio;
-        this.usuarioServicio = usuarioServicio;
+        this.securityUtils = securityUtils;
     }
 
     @GetMapping
     public ResponseEntity<List<Carrito>> obtenerCarrito() {
-        Long usuarioId = obtenerUsuarioActual().getId();
+        Long usuarioId = securityUtils.obtenerIdUsuarioActual();
         return ResponseEntity.ok(carritoServicio.obtenerCarritoPorUsuario(usuarioId));
     }
 
     @PostMapping("/agregar")
-    public ResponseEntity<Carrito> agregarAlCarrito(@RequestBody Map<String, Object> datos) {
-        Long usuarioId = obtenerUsuarioActual().getId();
-        Long pianoId = Long.valueOf(datos.get("pianoId").toString());
-        Integer cantidad = Integer.valueOf(datos.get("cantidad").toString());
-        
-        return ResponseEntity.ok(carritoServicio.agregarAlCarrito(usuarioId, pianoId, cantidad));
+    public ResponseEntity<CarritoResponse> agregarAlCarrito(@Valid @RequestBody AgregarAlCarritoRequest request) {
+        Long usuarioId = securityUtils.obtenerIdUsuarioActual();
+        Carrito carrito = carritoServicio.agregarAlCarrito(usuarioId, request.getPianoId(), request.getCantidad());
+        return ResponseEntity.ok(CarritoResponse.fromCarrito(carrito));
     }
 
     @PutMapping("/{itemId}")
-    public ResponseEntity<MensajeResponse> actualizarCantidad(
+    public ResponseEntity<CarritoResponse> actualizarCantidad(
             @PathVariable Long itemId,
-            @RequestBody Map<String, Integer> datos) {
-        
-        carritoServicio.actualizarCantidad(itemId, datos.get("cantidad"));
-        return ResponseEntity.ok(new MensajeResponse("Cantidad actualizada correctamente"));
+            @Valid @RequestBody ActualizarCantidadRequest request) {
+
+        Carrito carritoActualizado = carritoServicio.actualizarCantidad(itemId, request.getCantidad());
+        return ResponseEntity.ok(CarritoResponse.fromCarrito(carritoActualizado));
     }
 
     @DeleteMapping("/{itemId}")
-    public ResponseEntity<MensajeResponse> eliminarItem(@PathVariable Long itemId) {
+    public ResponseEntity<MensajeResponseDTO> eliminarItem(@PathVariable Long itemId) {
         carritoServicio.eliminarDelCarrito(itemId);
-        return ResponseEntity.ok(new MensajeResponse("Item eliminado del carrito"));
+        return ResponseEntity.ok(new MensajeResponseDTO("Item eliminado del carrito"));
     }
 
     @DeleteMapping
-    public ResponseEntity<MensajeResponse> vaciarCarrito() {
-        Long usuarioId = obtenerUsuarioActual().getId();
+    public ResponseEntity<MensajeResponseDTO> vaciarCarrito() {
+        Long usuarioId = securityUtils.obtenerIdUsuarioActual();
         carritoServicio.vaciarCarrito(usuarioId);
-        return ResponseEntity.ok(new MensajeResponse("Carrito vaciado correctamente"));
+        return ResponseEntity.ok(new MensajeResponseDTO("Carrito vaciado correctamente"));
     }
 
-    private Usuario obtenerUsuarioActual() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String email = auth.getName();
-        return usuarioServicio.buscarPorEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-    }
 }

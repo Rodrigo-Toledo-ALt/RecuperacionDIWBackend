@@ -87,10 +87,13 @@ public class PedidoServicio {
     }
 
     @Transactional
-    public Pedido actualizarEstadoPedido(Long pedidoId, String nuevoEstado) {
+    public Pedido actualizarEstadoPedido(Long pedidoId, EstadoPedido nuevoEstado) {
         Pedido pedido = pedidoRepositorio.findById(pedidoId)
                 .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
-        pedido.setEstado(nuevoEstado);
+
+        // Actualizamos el estado usando el enum
+        pedido.setEstado(nuevoEstado.name());
+
         return pedidoRepositorio.save(pedido);
     }
 }

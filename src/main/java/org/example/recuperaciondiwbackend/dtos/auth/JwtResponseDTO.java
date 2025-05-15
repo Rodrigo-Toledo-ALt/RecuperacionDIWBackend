@@ -1,4 +1,4 @@
-package org.example.recuperaciondiwbackend.dtos;
+package org.example.recuperaciondiwbackend.dtos.auth;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class JwtResponse {
+public class JwtResponseDTO {
     private String token;
     private String refreshToken;
     private String tipo = "Bearer";
@@ -18,7 +18,7 @@ public class JwtResponse {
     private String email;
     private String rol;
     
-    public JwtResponse(String token, Long id, String nombre, String email, String rol) {
+    public JwtResponseDTO(String token, Long id, String nombre, String email, String rol) {
         this.token = token;
         this.id = id;
         this.nombre = nombre;
@@ -26,7 +26,7 @@ public class JwtResponse {
         this.rol = rol;
     }
     
-    public JwtResponse(String token, String refreshToken, Long id, String nombre, String email, String rol) {
+    public JwtResponseDTO(String token, String refreshToken, Long id, String nombre, String email, String rol) {
         this.token = token;
         this.refreshToken = refreshToken;
         this.id = id;

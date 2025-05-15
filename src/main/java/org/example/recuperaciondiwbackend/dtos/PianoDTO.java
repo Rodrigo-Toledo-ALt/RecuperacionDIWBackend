@@ -12,7 +12,7 @@ import java.util.Set;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class PianoDto {
+public class PianoDTO {
     private Long id;
     private String nombre;
     private String modelo;
@@ -23,5 +23,5 @@ public class PianoDto {
     private LocalDateTime fechaCreacion;
     private String estado;
     private Set<String> caracteristicas = new HashSet<>();
-    private Set<EspecificacionDto> especificaciones = new HashSet<>();
+    private Set<EspecificacionDTO> especificaciones = new HashSet<>();
 }

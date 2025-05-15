@@ -1,5 +1,6 @@
 package org.example.recuperaciondiwbackend.controladores;
 
+import org.example.recuperaciondiwbackend.dtos.UsuarioDTO;
 import org.example.recuperaciondiwbackend.modelos.Usuario;
 import org.example.recuperaciondiwbackend.servicios.UsuarioServicio;
 import org.springframework.http.ResponseEntity;
@@ -20,16 +21,12 @@ public class UsuarioControlador {
     }
 
     @GetMapping("/perfil")
-    public ResponseEntity<Usuario> obtenerPerfilUsuario() {
+    public ResponseEntity<UsuarioDTO> obtenerPerfilUsuario() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String email = auth.getName();
-        
+
         return usuarioServicio.buscarPorEmail(email)
-                .map(usuario -> {
-                    // Por seguridad, no devolvemos el hash de la contraseña
-                    usuario.setContrasenaHash(null);
-                    return ResponseEntity.ok(usuario);
-                })
+                .map(usuario -> ResponseEntity.ok(new UsuarioDTO(usuario)))
                 .orElse(ResponseEntity.notFound().build());
     }
 }

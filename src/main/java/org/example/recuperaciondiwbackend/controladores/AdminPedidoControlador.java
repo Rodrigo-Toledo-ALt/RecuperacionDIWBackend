@@ -1,6 +1,7 @@
 package org.example.recuperaciondiwbackend.controladores;
 
-import org.example.recuperaciondiwbackend.dtos.MensajeResponse;
+import jakarta.validation.Valid;
+import org.example.recuperaciondiwbackend.dtos.ActualizarEstadoPedidoRequestDTO;
 import org.example.recuperaciondiwbackend.modelos.Pedido;
 import org.example.recuperaciondiwbackend.servicios.PedidoServicio;
 import org.springframework.http.ResponseEntity;
@@ -36,9 +37,8 @@ public class AdminPedidoControlador {
     @PutMapping("/{id}/estado")
     public ResponseEntity<Pedido> actualizarEstadoPedido(
             @PathVariable Long id,
-            @RequestBody Map<String, String> datos) {
-        
-        String nuevoEstado = datos.get("estado");
-        return ResponseEntity.ok(pedidoServicio.actualizarEstadoPedido(id, nuevoEstado));
+            @Valid @RequestBody ActualizarEstadoPedidoRequestDTO request) {
+
+        return ResponseEntity.ok(pedidoServicio.actualizarEstadoPedido(id, request.getEstado()));
     }
 }

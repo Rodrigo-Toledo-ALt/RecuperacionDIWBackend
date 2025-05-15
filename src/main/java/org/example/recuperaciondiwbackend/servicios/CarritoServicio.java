@@ -56,11 +56,11 @@ public class CarritoServicio {
     }
 
     @Transactional
-    public void actualizarCantidad(Long itemId, Integer cantidad) {
+    public Carrito actualizarCantidad(Long itemId, Integer cantidad) {
         Carrito item = carritoRepositorio.findById(itemId)
                 .orElseThrow(() -> new RuntimeException("Item del carrito no encontrado"));
         item.setCantidad(cantidad);
-        carritoRepositorio.save(item);
+        return carritoRepositorio.save(item);
     }
 
     @Transactional

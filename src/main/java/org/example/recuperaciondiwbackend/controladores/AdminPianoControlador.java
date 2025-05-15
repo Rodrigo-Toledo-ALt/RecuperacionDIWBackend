@@ -1,7 +1,7 @@
 package org.example.recuperaciondiwbackend.controladores;
 
-import org.example.recuperaciondiwbackend.dtos.MensajeResponse;
-import org.example.recuperaciondiwbackend.dtos.PianoDto;
+import org.example.recuperaciondiwbackend.dtos.MensajeResponseDTO;
+import org.example.recuperaciondiwbackend.dtos.PianoDTO;
 import org.example.recuperaciondiwbackend.servicios.PianoServicio;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,26 +23,26 @@ public class AdminPianoControlador {
     }
 
     @GetMapping
-    public ResponseEntity<List<PianoDto>> listarTodosPianos() {
-        List<PianoDto> pianos = pianoServicio.listarTodos().stream()
+    public ResponseEntity<List<PianoDTO>> listarTodosPianos() {
+        List<PianoDTO> pianos = pianoServicio.listarTodos().stream()
                 .map(pianoServicio::convertirADto)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(pianos);
     }
 
     @PostMapping
-    public ResponseEntity<PianoDto> crearPiano(@Valid @RequestBody PianoDto pianoDto) {
+    public ResponseEntity<PianoDTO> crearPiano(@Valid @RequestBody PianoDTO pianoDto) {
         return ResponseEntity.ok(pianoServicio.convertirADto(pianoServicio.guardarPiano(pianoDto)));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PianoDto> actualizarPiano(@PathVariable Long id, @Valid @RequestBody PianoDto pianoDto) {
+    public ResponseEntity<PianoDTO> actualizarPiano(@PathVariable Long id, @Valid @RequestBody PianoDTO pianoDto) {
         return ResponseEntity.ok(pianoServicio.convertirADto(pianoServicio.actualizarPiano(id, pianoDto)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<MensajeResponse> eliminarPiano(@PathVariable Long id) {
+    public ResponseEntity<MensajeResponseDTO> eliminarPiano(@PathVariable Long id) {
         pianoServicio.eliminarPiano(id);
-        return ResponseEntity.ok(new MensajeResponse("Piano eliminado correctamente"));
+        return ResponseEntity.ok(new MensajeResponseDTO("Piano eliminado correctamente"));
     }
 }

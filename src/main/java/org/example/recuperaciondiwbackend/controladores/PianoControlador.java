@@ -1,8 +1,6 @@
 package org.example.recuperaciondiwbackend.controladores;
 
-import org.example.recuperaciondiwbackend.dtos.MensajeResponse;
-import org.example.recuperaciondiwbackend.dtos.PianoDto;
-import org.example.recuperaciondiwbackend.modelos.Piano;
+import org.example.recuperaciondiwbackend.dtos.PianoDTO;
 import org.example.recuperaciondiwbackend.servicios.PianoServicio;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,15 +19,15 @@ public class PianoControlador {
     }
 
     @GetMapping
-    public ResponseEntity<List<PianoDto>> listarPianos() {
-        List<PianoDto> pianos = pianoServicio.listarActivos().stream()
+    public ResponseEntity<List<PianoDTO>> listarPianos() {
+        List<PianoDTO> pianos = pianoServicio.listarActivos().stream()
                 .map(pianoServicio::convertirADto)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(pianos);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PianoDto> obtenerPiano(@PathVariable Long id) {
+    public ResponseEntity<PianoDTO> obtenerPiano(@PathVariable Long id) {
         return pianoServicio.buscarPorId(id)
                 .map(piano -> ResponseEntity.ok(pianoServicio.convertirADto(piano)))
                 .orElse(ResponseEntity.notFound().build());
