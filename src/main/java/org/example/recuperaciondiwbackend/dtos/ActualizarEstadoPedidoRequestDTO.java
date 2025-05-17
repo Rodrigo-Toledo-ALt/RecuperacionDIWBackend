@@ -1,6 +1,7 @@
 package org.example.recuperaciondiwbackend.dtos;
 
-import jakarta.validation.constraints.NotBlank;
+
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,6 +12,6 @@ import org.example.recuperaciondiwbackend.modelos.EstadoPedido;
 @AllArgsConstructor
 public class ActualizarEstadoPedidoRequestDTO {
 
-    @NotBlank(message = "El estado es obligatorio")
+    @NotNull(message = "El estado es obligatorio")
     private EstadoPedido estado;
 }

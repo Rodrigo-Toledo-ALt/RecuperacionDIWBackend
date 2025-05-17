@@ -2,6 +2,7 @@ package org.example.recuperaciondiwbackend.servicios;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.TypedQuery;
 import org.example.recuperaciondiwbackend.dtos.pianos.PianoDTO;
 import org.example.recuperaciondiwbackend.dtos.pianos.PianoRelacionesDTO.CaracteristicaDTO;
 import org.example.recuperaciondiwbackend.dtos.pianos.PianoRelacionesDTO.TipoEspecificacionDTO;
@@ -18,8 +19,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -31,6 +34,9 @@ public class PianoServicio {
     private final CaracteristicaRepositorio caracteristicaRepositorio;
     private final TipoEspecificacionRepositorio tipoEspecificacionRepositorio;
     private final ValorEspecificacionRepositorio valorEspecificacionRepositorio;
+    
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public PianoServicio(PianoRepositorio pianoRepositorio, CaracteristicaRepositorio caracteristicaRepositorio,
                          TipoEspecificacionRepositorio tipoEspecificacionRepositorio,
@@ -41,16 +47,64 @@ public class PianoServicio {
         this.valorEspecificacionRepositorio = valorEspecificacionRepositorio;
     }
 
+    @Transactional(readOnly = true)
     public List<Piano> listarTodos() {
-        return pianoRepositorio.findAllWithRelations();
+        // Cargar pianos y características
+        TypedQuery<Piano> queryPianosCaract = entityManager.createQuery(
+                "SELECT DISTINCT p FROM Piano p LEFT JOIN FETCH p.caracteristicas", Piano.class);
+        List<Piano> pianos = queryPianosCaract.getResultList();
+        
+        // Cargar especificaciones por separado para evitar el producto cartesiano
+        for (Piano piano : pianos) {
+            entityManager.createQuery(
+                    "SELECT DISTINCT ve FROM ValorEspecificacion ve JOIN FETCH ve.tipo WHERE ve IN :especificaciones",
+                    ValorEspecificacion.class)
+                    .setParameter("especificaciones", piano.getEspecificaciones())
+                    .getResultList();
+        }
+        
+        return pianos;
     }
 
+    @Transactional(readOnly = true)
     public List<Piano> listarActivos() {
-        return pianoRepositorio.findByEstadoWithRelations("activo");
+        // Cargar pianos y características
+        TypedQuery<Piano> queryPianosCaract = entityManager.createQuery(
+                "SELECT DISTINCT p FROM Piano p LEFT JOIN FETCH p.caracteristicas WHERE p.estado = :estado", Piano.class)
+                .setParameter("estado", "activo");
+        List<Piano> pianos = queryPianosCaract.getResultList();
+        
+        // Cargar especificaciones por separado para evitar el producto cartesiano
+        for (Piano piano : pianos) {
+            entityManager.createQuery(
+                    "SELECT DISTINCT ve FROM ValorEspecificacion ve JOIN FETCH ve.tipo WHERE ve IN :especificaciones",
+                    ValorEspecificacion.class)
+                    .setParameter("especificaciones", piano.getEspecificaciones())
+                    .getResultList();
+        }
+        
+        return pianos;
     }
 
+    @Transactional(readOnly = true)
     public Optional<Piano> buscarPorId(Long id) {
-        return pianoRepositorio.findByIdWithRelations(id);
+        // Cargar piano con características
+        TypedQuery<Piano> queryPianoCaract = entityManager.createQuery(
+                "SELECT DISTINCT p FROM Piano p LEFT JOIN FETCH p.caracteristicas WHERE p.id = :id", Piano.class)
+                .setParameter("id", id);
+        
+        Piano piano = queryPianoCaract.getResultStream().findFirst().orElse(null);
+        
+        if (piano != null) {
+            // Cargar especificaciones por separado
+            entityManager.createQuery(
+                    "SELECT DISTINCT ve FROM ValorEspecificacion ve JOIN FETCH ve.tipo WHERE ve IN :especificaciones",
+                    ValorEspecificacion.class)
+                    .setParameter("especificaciones", piano.getEspecificaciones())
+                    .getResultList();
+        }
+        
+        return Optional.ofNullable(piano);
     }
 
     @Transactional
@@ -220,6 +274,7 @@ public class PianoServicio {
                 });
     }
 
+    @Transactional(readOnly = true)
     public PianoDTO convertirADto(Piano piano) {
         PianoDTO dto = new PianoDTO();
         dto.setId(piano.getId());
@@ -232,9 +287,12 @@ public class PianoServicio {
         dto.setFechaCreacion(piano.getFechaCreacion());
         dto.setEstado(piano.getEstado());
 
-        // Convertir características
+        // Cargar características directamente de la base de datos
+        List<Caracteristica> caracteristicas = caracteristicaRepositorio.findByPianoId(piano.getId());
+        
+        // Convertir a DTOs
         Set<CaracteristicaDTO> caracteristicasDTO = new HashSet<>();
-        for (Caracteristica caracteristica : piano.getCaracteristicas()) {
+        for (Caracteristica caracteristica : caracteristicas) {
             CaracteristicaDTO caracteristicaDTO = new CaracteristicaDTO();
             caracteristicaDTO.setId(caracteristica.getId());
             caracteristicaDTO.setDescripcion(caracteristica.getDescripcion());
@@ -242,9 +300,12 @@ public class PianoServicio {
         }
         dto.setCaracteristicas(caracteristicasDTO);
 
-        // Convertir especificaciones
+        // Cargar especificaciones directamente de la base de datos
+        List<ValorEspecificacion> especificaciones = valorEspecificacionRepositorio.findByPianoId(piano.getId());
+        
+        // Convertir a DTOs
         Set<ValorEspecificacionDTO> especificacionesDTO = new HashSet<>();
-        for (ValorEspecificacion valorEspecificacion : piano.getEspecificaciones()) {
+        for (ValorEspecificacion valorEspecificacion : especificaciones) {
             TipoEspecificacionDTO tipoDTO = new TipoEspecificacionDTO();
             tipoDTO.setId(valorEspecificacion.getTipo().getId());
             tipoDTO.setNombre(valorEspecificacion.getTipo().getNombre());
@@ -258,6 +319,12 @@ public class PianoServicio {
         }
         dto.setEspecificaciones(especificacionesDTO);
 
+        // Imprimir para depuración
+        System.out.println("Piano ID: " + piano.getId());
+        System.out.println("Piano nombre: " + piano.getNombre());
+        System.out.println("Características cargadas de BD: " + caracteristicas.size());
+        System.out.println("Especificaciones cargadas de BD: " + especificaciones.size());
+        
         return dto;
     }
 }

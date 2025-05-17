@@ -42,14 +42,67 @@ public interface PianoRepositorio extends JpaRepository<Piano, Long> {
             nativeQuery = true)
     void eliminarTodasLasEspecificaciones(@Param("pianoId") Long pianoId);
 
-    @Query("SELECT p FROM Piano p LEFT JOIN FETCH p.caracteristicas LEFT JOIN FETCH p.especificaciones WHERE p.estado = :estado")
-    List<Piano> findByEstadoWithRelations(@Param("estado") String estado);
+    @Query("SELECT DISTINCT p FROM Piano p LEFT JOIN FETCH p.caracteristicas WHERE p.estado = :estado")
+    List<Piano> findByEstadoWithCaracteristicas(@Param("estado") String estado);
+    
+    @Query("SELECT DISTINCT p FROM Piano p LEFT JOIN FETCH p.especificaciones e LEFT JOIN FETCH e.tipo WHERE p.estado = :estado")
+    List<Piano> findByEstadoWithEspecificaciones(@Param("estado") String estado);
+    
+    default List<Piano> findByEstadoWithRelations(@Param("estado") String estado) {
+        List<Piano> pianosWithCaracteristicas = findByEstadoWithCaracteristicas(estado);
+        List<Piano> pianosWithEspecificaciones = findByEstadoWithEspecificaciones(estado);
+        
+        // Combine the results - use first query result as base
+        for (Piano pianoWithSpecs : pianosWithEspecificaciones) {
+            pianosWithCaracteristicas.stream()
+                .filter(p -> p.getId().equals(pianoWithSpecs.getId()))
+                .findFirst()
+                .ifPresent(piano -> piano.setEspecificaciones(pianoWithSpecs.getEspecificaciones()));
+        }
+        
+        return pianosWithCaracteristicas;
+    }
 
-    @Query("SELECT p FROM Piano p LEFT JOIN FETCH p.caracteristicas LEFT JOIN FETCH p.especificaciones WHERE p.id = :id")
-    Optional<Piano> findByIdWithRelations(@Param("id") Long id);
+    @Query("SELECT DISTINCT p FROM Piano p LEFT JOIN FETCH p.caracteristicas WHERE p.id = :id")
+    Optional<Piano> findByIdWithCaracteristicas(@Param("id") Long id);
+    
+    @Query("SELECT DISTINCT p FROM Piano p LEFT JOIN FETCH p.especificaciones e LEFT JOIN FETCH e.tipo WHERE p.id = :id")
+    Optional<Piano> findByIdWithEspecificaciones(@Param("id") Long id);
+    
+    default Optional<Piano> findByIdWithRelations(@Param("id") Long id) {
+        Optional<Piano> pianoWithCaracteristicas = findByIdWithCaracteristicas(id);
+        if (!pianoWithCaracteristicas.isPresent()) {
+            return Optional.empty();
+        }
+        
+        Optional<Piano> pianoWithEspecificaciones = findByIdWithEspecificaciones(id);
+        if (pianoWithEspecificaciones.isPresent()) {
+            pianoWithCaracteristicas.get().setEspecificaciones(pianoWithEspecificaciones.get().getEspecificaciones());
+        }
+        
+        return pianoWithCaracteristicas;
+    }
 
-    @Query("SELECT p FROM Piano p LEFT JOIN FETCH p.caracteristicas LEFT JOIN FETCH p.especificaciones")
-    List<Piano> findAllWithRelations();
+    @Query("SELECT DISTINCT p FROM Piano p LEFT JOIN FETCH p.caracteristicas")
+    List<Piano> findAllWithCaracteristicas();
+    
+    @Query("SELECT DISTINCT p FROM Piano p LEFT JOIN FETCH p.especificaciones e LEFT JOIN FETCH e.tipo")
+    List<Piano> findAllWithEspecificaciones();
+    
+    default List<Piano> findAllWithRelations() {
+        List<Piano> pianosWithCaracteristicas = findAllWithCaracteristicas();
+        List<Piano> pianosWithEspecificaciones = findAllWithEspecificaciones();
+        
+        // Combine the results - use first query result as base
+        for (Piano pianoWithSpecs : pianosWithEspecificaciones) {
+            pianosWithCaracteristicas.stream()
+                .filter(p -> p.getId().equals(pianoWithSpecs.getId()))
+                .findFirst()
+                .ifPresent(piano -> piano.setEspecificaciones(pianoWithSpecs.getEspecificaciones()));
+        }
+        
+        return pianosWithCaracteristicas;
+    }
 
 
 

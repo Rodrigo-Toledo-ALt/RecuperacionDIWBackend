@@ -44,17 +44,19 @@ public class Piano {
     
     private String estado = "activo";
     
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "piano_caracteristicas",
+        schema = "tienda_pianos",
         joinColumns = @JoinColumn(name = "piano_id"),
         inverseJoinColumns = @JoinColumn(name = "caracteristica_id")
     )
     private Set<Caracteristica> caracteristicas = new HashSet<>();
     
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "piano_especificaciones",
+        schema = "tienda_pianos",
         joinColumns = @JoinColumn(name = "piano_id"),
         inverseJoinColumns = @JoinColumn(name = "valor_especificacion_id")
     )

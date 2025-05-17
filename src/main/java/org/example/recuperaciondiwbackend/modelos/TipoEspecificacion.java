@@ -14,6 +14,7 @@ import java.util.Set;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(exclude = {"valores"})
 public class TipoEspecificacion {
     
     @Id
