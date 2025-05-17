@@ -42,15 +42,15 @@ public class PianoServicio {
     }
 
     public List<Piano> listarTodos() {
-        return pianoRepositorio.findAll();
+        return pianoRepositorio.findAllWithRelations();
     }
 
     public List<Piano> listarActivos() {
-        return pianoRepositorio.findByEstado("activo");
+        return pianoRepositorio.findByEstadoWithRelations("activo");
     }
 
     public Optional<Piano> buscarPorId(Long id) {
-        return pianoRepositorio.findById(id);
+        return pianoRepositorio.findByIdWithRelations(id);
     }
 
     @Transactional

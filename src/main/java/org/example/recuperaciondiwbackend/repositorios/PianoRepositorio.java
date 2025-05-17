@@ -1,6 +1,8 @@
 package org.example.recuperaciondiwbackend.repositorios;
 
+import org.example.recuperaciondiwbackend.modelos.Caracteristica;
 import org.example.recuperaciondiwbackend.modelos.Piano;
+import org.example.recuperaciondiwbackend.modelos.ValorEspecificacion;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -8,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PianoRepositorio extends JpaRepository<Piano, Long> {
@@ -38,6 +41,23 @@ public interface PianoRepositorio extends JpaRepository<Piano, Long> {
     @Query(value = "DELETE FROM tienda_pianos.piano_especificaciones WHERE piano_id = :pianoId",
             nativeQuery = true)
     void eliminarTodasLasEspecificaciones(@Param("pianoId") Long pianoId);
+
+    @Query("SELECT p FROM Piano p LEFT JOIN FETCH p.caracteristicas LEFT JOIN FETCH p.especificaciones WHERE p.estado = :estado")
+    List<Piano> findByEstadoWithRelations(@Param("estado") String estado);
+
+    @Query("SELECT p FROM Piano p LEFT JOIN FETCH p.caracteristicas LEFT JOIN FETCH p.especificaciones WHERE p.id = :id")
+    Optional<Piano> findByIdWithRelations(@Param("id") Long id);
+
+    @Query("SELECT p FROM Piano p LEFT JOIN FETCH p.caracteristicas LEFT JOIN FETCH p.especificaciones")
+    List<Piano> findAllWithRelations();
+
+
+
+
+
+
+
+
 
 
 }

@@ -22,6 +22,6 @@ public class Caracteristica {
     @Column(unique = true, nullable = false)
     private String descripcion;
     
-    @ManyToMany(mappedBy = "caracteristicas")
+    @ManyToMany(mappedBy = "caracteristicas", fetch = FetchType.LAZY)
     private Set<Piano> pianos = new HashSet<>();
 }

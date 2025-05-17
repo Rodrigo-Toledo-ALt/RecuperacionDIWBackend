@@ -3,6 +3,7 @@ package org.example.recuperaciondiwbackend.modelos;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
@@ -43,7 +44,7 @@ public class Piano {
     
     private String estado = "activo";
     
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "piano_caracteristicas",
         joinColumns = @JoinColumn(name = "piano_id"),
@@ -51,7 +52,7 @@ public class Piano {
     )
     private Set<Caracteristica> caracteristicas = new HashSet<>();
     
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "piano_especificaciones",
         joinColumns = @JoinColumn(name = "piano_id"),

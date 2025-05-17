@@ -3,6 +3,7 @@ package org.example.recuperaciondiwbackend.modelos;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.util.HashSet;
@@ -22,6 +23,6 @@ public class TipoEspecificacion {
     @Column(unique = true, nullable = false)
     private String nombre;
     
-    @OneToMany(mappedBy = "tipo", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "tipo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Set<ValorEspecificacion> valores = new HashSet<>();
 }
