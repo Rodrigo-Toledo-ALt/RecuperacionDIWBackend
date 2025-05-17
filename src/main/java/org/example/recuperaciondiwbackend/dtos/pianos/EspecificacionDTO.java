@@ -1,4 +1,4 @@
-package org.example.recuperaciondiwbackend.dtos;
+package org.example.recuperaciondiwbackend.dtos.pianos;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

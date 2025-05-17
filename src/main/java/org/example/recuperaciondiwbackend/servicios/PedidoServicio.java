@@ -47,23 +47,31 @@ public class PedidoServicio {
     public Pedido crearPedidoDesdeCarrito(Long usuarioId, String direccionEnvio, String metodoPago) {
         Usuario usuario = usuarioRepositorio.findById(usuarioId)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        
+
         List<Carrito> itemsCarrito = carritoRepositorio.findByUsuario(usuario);
         if (itemsCarrito.isEmpty()) {
             throw new RuntimeException("El carrito está vacío");
         }
 
+        // Calcular total primero
+        BigDecimal total = BigDecimal.ZERO;
+        for (Carrito item : itemsCarrito) {
+            BigDecimal subtotal = item.getPiano().getPrecio().multiply(BigDecimal.valueOf(item.getCantidad()));
+            total = total.add(subtotal);
+        }
+
+        // Crear pedido con total ya calculado
         Pedido pedido = new Pedido();
         pedido.setUsuario(usuario);
         pedido.setFechaPedido(LocalDateTime.now());
         pedido.setEstado("pendiente");
         pedido.setDireccionEnvio(direccionEnvio);
         pedido.setMetodoPago(metodoPago);
-        
-        BigDecimal total = BigDecimal.ZERO;
-        
+        pedido.setTotal(total); // Asignar total antes de guardar
+
         Pedido pedidoGuardado = pedidoRepositorio.save(pedido);
-        
+
+        // Crear items del pedido
         for (Carrito item : itemsCarrito) {
             ItemPedido itemPedido = new ItemPedido();
             itemPedido.setPedido(pedidoGuardado);
@@ -73,17 +81,12 @@ public class PedidoServicio {
             BigDecimal subtotal = item.getPiano().getPrecio().multiply(BigDecimal.valueOf(item.getCantidad()));
             itemPedido.setSubtotal(subtotal);
             itemPedidoRepositorio.save(itemPedido);
-            
-            total = total.add(subtotal);
         }
-        
-        pedidoGuardado.setTotal(total);
-        Pedido resultado = pedidoRepositorio.save(pedidoGuardado);
-        
+
         // Vaciar el carrito
         carritoRepositorio.deleteAll(itemsCarrito);
-        
-        return resultado;
+
+        return pedidoGuardado;
     }
 
     @Transactional

@@ -14,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -31,16 +32,24 @@ public class PedidoControlador {
     }
 
     @GetMapping
-    public ResponseEntity<List<Pedido>> listarPedidosUsuario() {
+    public ResponseEntity<List<PedidoResponse>> listarPedidosUsuario() {
         Long usuarioId = securityUtils.obtenerIdUsuarioActual();
-        return ResponseEntity.ok(pedidoServicio.listarPorUsuario(usuarioId));
+        List<Pedido> pedidosRespuesta = pedidoServicio.listarPorUsuario(usuarioId);
+        List<PedidoResponse> pedidosResponse = new ArrayList<>();
+
+        for (Pedido p : pedidosRespuesta) {
+            pedidosResponse.add(PedidoResponse.fromPedido(p));
+        }
+
+        return ResponseEntity.ok(pedidosResponse);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Pedido> obtenerPedido(@PathVariable Long id) {
+    public ResponseEntity<PedidoResponse> obtenerPedido(@PathVariable Long id) {
         Long usuarioId = securityUtils.obtenerIdUsuarioActual();
         return pedidoServicio.buscarPorId(id)
                 .filter(pedido -> pedido.getUsuario().getId().equals(usuarioId))
+                .map(PedidoResponse::fromPedido)  // Convertir a DTO
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

@@ -1,7 +1,11 @@
 package org.example.recuperaciondiwbackend.servicios;
 
-import org.example.recuperaciondiwbackend.dtos.EspecificacionDTO;
-import org.example.recuperaciondiwbackend.dtos.PianoDTO;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import org.example.recuperaciondiwbackend.dtos.pianos.PianoDTO;
+import org.example.recuperaciondiwbackend.dtos.pianos.PianoRelacionesDTO.CaracteristicaDTO;
+import org.example.recuperaciondiwbackend.dtos.pianos.PianoRelacionesDTO.TipoEspecificacionDTO;
+import org.example.recuperaciondiwbackend.dtos.pianos.PianoRelacionesDTO.ValorEspecificacionDTO;
 import org.example.recuperaciondiwbackend.modelos.Caracteristica;
 import org.example.recuperaciondiwbackend.modelos.Piano;
 import org.example.recuperaciondiwbackend.modelos.TipoEspecificacion;
@@ -14,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -50,6 +55,7 @@ public class PianoServicio {
 
     @Transactional
     public Piano guardarPiano(PianoDTO pianoDto) {
+        // 1. Crear y guardar el piano primero sin relaciones
         Piano piano = new Piano();
         piano.setNombre(pianoDto.getNombre());
         piano.setModelo(pianoDto.getModelo());
@@ -60,29 +66,51 @@ public class PianoServicio {
         piano.setFechaCreacion(LocalDateTime.now());
         piano.setEstado("activo");
 
+        // Inicializar con colecciones vacías para evitar NullPointerExceptions
+        piano.setCaracteristicas(new HashSet<>());
+        piano.setEspecificaciones(new HashSet<>());
+
+        // 2. Guardar el piano primero para obtener su ID
         Piano pianoBD = pianoRepositorio.save(piano);
 
-        // Agregar características
+        // 3. Limpiar la sesión para evitar problemas de modificación concurrente
+        pianoRepositorio.flush();
+
+        // 4. Procesar y guardar características una por una
         if (pianoDto.getCaracteristicas() != null) {
-            Set<Caracteristica> caracteristicas = pianoDto.getCaracteristicas().stream()
-                    .map(this::obtenerOCrearCaracteristica)
-                    .collect(Collectors.toSet());
-            pianoBD.setCaracteristicas(caracteristicas);
+            for (CaracteristicaDTO caracteristicaDTO : pianoDto.getCaracteristicas()) {
+                Caracteristica caracteristica =
+                        obtenerOCrearCaracteristica(caracteristicaDTO.getDescripcion());
+
+                // Usar el método del repositorio
+                pianoRepositorio.agregarCaracteristica(pianoBD.getId(), caracteristica.getId());
+            }
         }
 
-        // Agregar especificaciones
+        // 5. Procesar y guardar especificaciones una por una
         if (pianoDto.getEspecificaciones() != null) {
-            Set<ValorEspecificacion> especificaciones = pianoDto.getEspecificaciones().stream()
-                    .map(this::obtenerOCrearValorEspecificacion)
-                    .collect(Collectors.toSet());
-            pianoBD.setEspecificaciones(especificaciones);
+            for (ValorEspecificacionDTO valorEspecificacionDTO : pianoDto.getEspecificaciones()) {
+                String nombreTipo = valorEspecificacionDTO.getTipo().getNombre();
+                String valor = valorEspecificacionDTO.getValor();
+
+                ValorEspecificacion valEspec =
+                        obtenerOCrearValorEspecificacion(nombreTipo, valor);
+
+                // Usar el método del repositorio
+                pianoRepositorio.agregarEspecificacion(pianoBD.getId(), valEspec.getId());
+            }
         }
 
-        return pianoRepositorio.save(pianoBD);
+        // 6. Recargar el piano con todas sus relaciones
+        return pianoRepositorio.findById(pianoBD.getId())
+                .orElseThrow(() -> new RuntimeException("Error al guardar el piano"));
     }
+
+
 
     @Transactional
     public Piano actualizarPiano(Long id, PianoDTO pianoDto) {
+        // 1. Buscar y actualizar los datos básicos del piano
         Piano piano = pianoRepositorio.findById(id)
                 .orElseThrow(() -> new RuntimeException("Piano no encontrado"));
 
@@ -94,25 +122,58 @@ public class PianoServicio {
         piano.setDescripcion(pianoDto.getDescripcion());
         piano.setEstado(pianoDto.getEstado());
 
-        // Actualizar características
+        // 2. Guardar los cambios básicos
+        Piano pianoActualizado = pianoRepositorio.save(piano);
+
+        // 3. Eliminar todas las relaciones existentes
+        pianoRepositorio.eliminarTodasLasCaracteristicas(id);
+        pianoRepositorio.eliminarTodasLasEspecificaciones(id);
+
+        // 4. Crear nuevas relaciones para características
         if (pianoDto.getCaracteristicas() != null) {
-            piano.getCaracteristicas().clear();
-            Set<Caracteristica> caracteristicas = pianoDto.getCaracteristicas().stream()
-                    .map(this::obtenerOCrearCaracteristica)
-                    .collect(Collectors.toSet());
-            piano.setCaracteristicas(caracteristicas);
+            for (CaracteristicaDTO caracteristicaDTO : pianoDto.getCaracteristicas()) {
+                // 4.1 Obtener o crear la característica
+                Caracteristica caracteristica;
+
+                if (caracteristicaDTO.getId() != null) {
+                    // Si tiene ID, intentamos encontrarla primero
+                    caracteristica = caracteristicaRepositorio.findById(caracteristicaDTO.getId())
+                            .orElseGet(() -> obtenerOCrearCaracteristica(caracteristicaDTO.getDescripcion()));
+                } else {
+                    // Si no tiene ID, buscamos por descripción
+                    caracteristica = obtenerOCrearCaracteristica(caracteristicaDTO.getDescripcion());
+                }
+
+                // 4.2 Crear la relación
+                pianoRepositorio.agregarCaracteristica(id, caracteristica.getId());
+            }
         }
 
-        // Actualizar especificaciones
+        // 5. Crear nuevas relaciones para especificaciones
         if (pianoDto.getEspecificaciones() != null) {
-            piano.getEspecificaciones().clear();
-            Set<ValorEspecificacion> especificaciones = pianoDto.getEspecificaciones().stream()
-                    .map(this::obtenerOCrearValorEspecificacion)
-                    .collect(Collectors.toSet());
-            piano.setEspecificaciones(especificaciones);
+            for (ValorEspecificacionDTO especificacionDTO : pianoDto.getEspecificaciones()) {
+                // 5.1 Obtener el tipo
+                TipoEspecificacion tipo;
+
+                if (especificacionDTO.getTipo().getId() != null) {
+                    tipo = tipoEspecificacionRepositorio.findById(especificacionDTO.getTipo().getId())
+                            .orElseGet(() -> obtenerOCrearTipoEspecificacion(especificacionDTO.getTipo().getNombre()));
+                } else {
+                    tipo = obtenerOCrearTipoEspecificacion(especificacionDTO.getTipo().getNombre());
+                }
+
+                // 5.2 Obtener o crear el valor de especificación
+                ValorEspecificacion valorEspec =
+                        obtenerOCrearValorEspecificacion(tipo.getNombre(), especificacionDTO.getValor());
+
+                // 5.3 Crear la relación
+                pianoRepositorio.agregarEspecificacion(id, valorEspec.getId());
+            }
         }
 
-        return pianoRepositorio.save(piano);
+        // 6. Recargar el piano con todas sus relaciones actualizadas
+        return pianoRepositorio.findById(id)
+                .orElseThrow(() -> new RuntimeException("Error al actualizar el piano"));
     }
 
     @Transactional
@@ -132,20 +193,30 @@ public class PianoServicio {
                 });
     }
 
-    private ValorEspecificacion obtenerOCrearValorEspecificacion(EspecificacionDTO especificacionDto) {
-        TipoEspecificacion tipo = tipoEspecificacionRepositorio.findByNombre(especificacionDto.getTipo())
+    private ValorEspecificacion obtenerOCrearValorEspecificacion(String nombreTipo, String valor) {
+        TipoEspecificacion tipo = tipoEspecificacionRepositorio.findByNombre(nombreTipo)
                 .orElseGet(() -> {
                     TipoEspecificacion nuevoTipo = new TipoEspecificacion();
-                    nuevoTipo.setNombre(especificacionDto.getTipo());
+                    nuevoTipo.setNombre(nombreTipo);
                     return tipoEspecificacionRepositorio.save(nuevoTipo);
                 });
 
-        return valorEspecificacionRepositorio.findByTipoAndValor(tipo, especificacionDto.getValor())
+        return valorEspecificacionRepositorio.findByTipoAndValor(tipo, valor)
                 .orElseGet(() -> {
                     ValorEspecificacion nuevoValor = new ValorEspecificacion();
                     nuevoValor.setTipo(tipo);
-                    nuevoValor.setValor(especificacionDto.getValor());
+                    nuevoValor.setValor(valor);
                     return valorEspecificacionRepositorio.save(nuevoValor);
+                });
+    }
+
+    // Método auxiliar para obtener o crear un tipo de especificación
+    private TipoEspecificacion obtenerOCrearTipoEspecificacion(String nombre) {
+        return tipoEspecificacionRepositorio.findByNombre(nombre)
+                .orElseGet(() -> {
+                    TipoEspecificacion nuevoTipo = new TipoEspecificacion();
+                    nuevoTipo.setNombre(nombre);
+                    return tipoEspecificacionRepositorio.save(nuevoTipo);
                 });
     }
 
@@ -162,16 +233,30 @@ public class PianoServicio {
         dto.setEstado(piano.getEstado());
 
         // Convertir características
-        Set<String> caracteristicas = piano.getCaracteristicas().stream()
-                .map(Caracteristica::getDescripcion)
-                .collect(Collectors.toSet());
-        dto.setCaracteristicas(caracteristicas);
+        Set<CaracteristicaDTO> caracteristicasDTO = new HashSet<>();
+        for (Caracteristica caracteristica : piano.getCaracteristicas()) {
+            CaracteristicaDTO caracteristicaDTO = new CaracteristicaDTO();
+            caracteristicaDTO.setId(caracteristica.getId());
+            caracteristicaDTO.setDescripcion(caracteristica.getDescripcion());
+            caracteristicasDTO.add(caracteristicaDTO);
+        }
+        dto.setCaracteristicas(caracteristicasDTO);
 
         // Convertir especificaciones
-        Set<EspecificacionDTO> especificaciones = piano.getEspecificaciones().stream()
-                .map(ve -> new EspecificacionDTO(ve.getTipo().getNombre(), ve.getValor()))
-                .collect(Collectors.toSet());
-        dto.setEspecificaciones(especificaciones);
+        Set<ValorEspecificacionDTO> especificacionesDTO = new HashSet<>();
+        for (ValorEspecificacion valorEspecificacion : piano.getEspecificaciones()) {
+            TipoEspecificacionDTO tipoDTO = new TipoEspecificacionDTO();
+            tipoDTO.setId(valorEspecificacion.getTipo().getId());
+            tipoDTO.setNombre(valorEspecificacion.getTipo().getNombre());
+
+            ValorEspecificacionDTO valorEspecificacionDTO = new ValorEspecificacionDTO();
+            valorEspecificacionDTO.setId(valorEspecificacion.getId());
+            valorEspecificacionDTO.setTipo(tipoDTO);
+            valorEspecificacionDTO.setValor(valorEspecificacion.getValor());
+
+            especificacionesDTO.add(valorEspecificacionDTO);
+        }
+        dto.setEspecificaciones(especificacionesDTO);
 
         return dto;
     }

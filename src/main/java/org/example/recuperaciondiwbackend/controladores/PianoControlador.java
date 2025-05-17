@@ -1,6 +1,6 @@
 package org.example.recuperaciondiwbackend.controladores;
 
-import org.example.recuperaciondiwbackend.dtos.PianoDTO;
+import org.example.recuperaciondiwbackend.dtos.pianos.PianoDTO;
 import org.example.recuperaciondiwbackend.servicios.PianoServicio;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
