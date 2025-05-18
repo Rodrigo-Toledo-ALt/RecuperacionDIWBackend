@@ -2,6 +2,9 @@ package org.example.recuperaciondiwbackend.servicios;
 
 import org.example.recuperaciondiwbackend.modelos.Usuario;
 import org.example.recuperaciondiwbackend.repositorios.UsuarioRepositorio;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -71,5 +74,76 @@ public class UsuarioServicio {
 
     public List<Usuario> listarTodos() {
         return usuarioRepositorio.findAll();
+    }
+
+    @Transactional
+    public Usuario cambiarEstadoUsuario(Long id, String nuevoEstado) {
+        Usuario usuario = buscarPorId(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        // Validar el nuevo estado
+        if (nuevoEstado == null || (!nuevoEstado.equals("activo") && !nuevoEstado.equals("inactivo"))) {
+            throw new IllegalArgumentException("Estado no válido. Debe ser 'activo' o 'inactivo'.");
+        }
+
+        usuario.setEstado(nuevoEstado);
+        return usuarioRepositorio.save(usuario);
+    }
+
+    @Transactional
+    public Usuario actualizarUsuario(Long id, String nombre, String email) {
+        Usuario usuario = buscarPorId(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        // Comprobar si el nuevo email ya está en uso (si ha cambiado)
+        if (email != null && !usuario.getEmail().equals(email) && usuarioRepositorio.existsByEmail(email)) {
+            throw new RuntimeException("El email ya está en uso por otro usuario");
+        }
+
+        if (nombre != null) {
+            usuario.setNombre(nombre);
+        }
+
+        if (email != null) {
+            usuario.setEmail(email);
+        }
+
+        return usuarioRepositorio.save(usuario);
+    }
+
+    @Transactional
+    public Usuario actualizarUsuarioCompleto(Long id, String nombre, String email,
+                                             String rol, String estado) {
+        Usuario usuario = buscarPorId(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        // Comprobar si el nuevo email ya está en uso (si ha cambiado)
+        if (!usuario.getEmail().equals(email) && usuarioRepositorio.existsByEmail(email)) {
+            throw new RuntimeException("El email ya está en uso por otro usuario");
+        }
+
+        if (nombre != null) {
+            usuario.setNombre(nombre);
+        }
+
+        if (email != null) {
+            usuario.setEmail(email);
+        }
+
+        // Solo permitir cambios de rol y estado si quien hace la petición es admin
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ADMIN"));
+
+        if (isAdmin) {
+            if (rol != null && ("admin".equals(rol) || "user".equals(rol))) {
+                usuario.setRol(rol);
+            }
+
+            if (estado != null && ("activo".equals(estado) || "inactivo".equals(estado))) {
+                usuario.setEstado(estado);
+            }
+        }
+
+        return usuarioRepositorio.save(usuario);
     }
 }

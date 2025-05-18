@@ -36,6 +36,9 @@ public class Usuario implements UserDetails {
     
     @Column(nullable = false)
     private String rol = "user";
+
+    @Column(nullable = false)
+    private String estado = "activo";
     
     @Column(name = "fecha_registro")
     private LocalDateTime fechaRegistro;

@@ -7,12 +7,14 @@ import org.example.recuperaciondiwbackend.dtos.auth.RefreshTokenRequestDTO;
 import org.example.recuperaciondiwbackend.dtos.auth.RegistroRequestDTO;
 import org.example.recuperaciondiwbackend.modelos.Usuario;
 import org.example.recuperaciondiwbackend.seguridad.JwtTokenUtil;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -33,7 +35,15 @@ public class AuthServicio {
 
         Usuario usuario = usuarioServicio.buscarPorEmail(loginRequestDTO.getEmail())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        
+
+        // Verificar si el usuario está activo
+        if (!"activo".equals(usuario.getEstado())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "La cuenta se encuentra inactiva. Contacte al administrador."
+            );
+        }
+
         String refreshToken = jwtTokenUtil.generarRefreshToken(usuario);
         
         usuarioServicio.actualizarUltimoLogin(loginRequestDTO.getEmail());

@@ -9,8 +9,10 @@ import org.example.recuperaciondiwbackend.dtos.auth.RefreshTokenRequestDTO;
 import org.example.recuperaciondiwbackend.dtos.auth.RegistroRequestDTO;
 import org.example.recuperaciondiwbackend.modelos.Usuario;
 import org.example.recuperaciondiwbackend.servicios.AuthServicio;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/auth")
@@ -21,7 +23,17 @@ public class AuthControlador {
 
     @PostMapping("/login")
     public ResponseEntity<JwtResponseDTO> autenticarUsuario(@Valid @RequestBody LoginRequestDTO loginRequestDTO) {
-        return ResponseEntity.ok(authServicio.login(loginRequestDTO));
+        try {
+            return ResponseEntity.ok(authServicio.login(loginRequestDTO));
+        } catch (ResponseStatusException e) {
+            // Convertir la ResponseStatusException en una respuesta HTTP con el estado y mensaje adecuados
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al procesar la solicitud de login: " + e.getMessage()
+            );
+        }
     }
 
     @PostMapping("/registro")
