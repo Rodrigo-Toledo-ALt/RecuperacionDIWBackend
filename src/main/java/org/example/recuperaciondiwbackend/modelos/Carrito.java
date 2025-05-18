@@ -1,9 +1,7 @@
 package org.example.recuperaciondiwbackend.modelos;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -12,6 +10,8 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(exclude = {"usuario", "piano"}) //puede ser que de problemas
+@ToString(exclude = {"usuario", "piano"})
 public class Carrito {
     
     @Id

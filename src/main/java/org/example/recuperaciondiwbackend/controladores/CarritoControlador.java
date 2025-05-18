@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/carrito")
@@ -29,9 +30,16 @@ public class CarritoControlador {
     }
 
     @GetMapping
-    public ResponseEntity<List<Carrito>> obtenerCarrito() {
+    public ResponseEntity<List<CarritoResponse>> obtenerCarrito() {
         Long usuarioId = securityUtils.obtenerIdUsuarioActual();
-        return ResponseEntity.ok(carritoServicio.obtenerCarritoPorUsuario(usuarioId));
+        List<Carrito> carritoEntidades = carritoServicio.obtenerCarritoPorUsuario(usuarioId);
+
+        // Convertir las entidades a DTOs
+        List<CarritoResponse> carritoResponseList = carritoEntidades.stream()
+                .map(CarritoResponse::fromCarrito)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(carritoResponseList);
     }
 
     @PostMapping("/agregar")

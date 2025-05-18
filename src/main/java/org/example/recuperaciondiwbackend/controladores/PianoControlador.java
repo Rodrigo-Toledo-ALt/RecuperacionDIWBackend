@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/pianos")
+@RequestMapping("/pianos")
 public class PianoControlador {
 
     private final PianoServicio pianoServicio;
