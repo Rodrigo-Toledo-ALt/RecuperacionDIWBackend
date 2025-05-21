@@ -54,6 +54,7 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/auth/**").permitAll()
                         .requestMatchers("/api/pianos/**").permitAll()
+                        .requestMatchers("/pianos/**").permitAll()
                         .requestMatchers("/api/error/**", "/error/**").permitAll()
                         .requestMatchers("/api/debug/**", "/debug/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

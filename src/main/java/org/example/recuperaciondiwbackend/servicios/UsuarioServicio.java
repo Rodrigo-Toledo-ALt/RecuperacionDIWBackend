@@ -146,4 +146,22 @@ public class UsuarioServicio {
 
         return usuarioRepositorio.save(usuario);
     }
+
+    @Transactional
+    public void cambiarContrasena(Long usuarioId, String contrasenaActual, String nuevaContrasena) {
+        Usuario usuario = buscarPorId(usuarioId)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        // Si se proporciona contraseña actual, verificarla (caso de usuario normal)
+        if (contrasenaActual != null) {
+            if (!passwordEncoder.matches(contrasenaActual, usuario.getContrasenaHash())) {
+                throw new RuntimeException("Contraseña actual incorrecta");
+            }
+        }
+        // Si no se proporciona contraseña actual, asumimos que es un admin quien llama
+
+        // Actualizar la contraseña
+        usuario.setContrasenaHash(passwordEncoder.encode(nuevaContrasena));
+        usuarioRepositorio.save(usuario);
+    }
 }

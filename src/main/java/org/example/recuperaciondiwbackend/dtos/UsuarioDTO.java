@@ -19,6 +19,10 @@ public class UsuarioDTO {
     private LocalDateTime fechaRegistro;
     private LocalDateTime ultimoLogin;
 
+    // Campos para cambio de contraseña
+    private String contrasenaActual;    // Para verificar la contraseña actual
+    private String nuevaContrasena;     // Para establecer una nueva contraseña
+
     // Constructor para convertir de Usuario a UsuarioDTO
     public UsuarioDTO(Usuario usuario) {
         this.id = usuario.getId();
@@ -28,5 +32,7 @@ public class UsuarioDTO {
         this.estado = usuario.getEstado(); // Asignar el nuevo campo
         this.fechaRegistro = usuario.getFechaRegistro();
         this.ultimoLogin = usuario.getUltimoLogin();
+
+
     }
 }
