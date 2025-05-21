@@ -1,5 +1,9 @@
 package org.example.recuperaciondiwbackend.servicios;
 
+import jakarta.validation.Valid;
+
+import org.example.recuperaciondiwbackend.dtos.CambioContrasenaDTO;
+import org.example.recuperaciondiwbackend.dtos.UsuarioDTO;
 import org.example.recuperaciondiwbackend.modelos.Usuario;
 import org.example.recuperaciondiwbackend.repositorios.UsuarioRepositorio;
 import org.springframework.security.core.Authentication;
@@ -19,9 +23,11 @@ public class UsuarioServicio {
     private final UsuarioRepositorio usuarioRepositorio;
     private final PasswordEncoder passwordEncoder;
 
+
     public UsuarioServicio(UsuarioRepositorio usuarioRepositorio, PasswordEncoder passwordEncoder) {
         this.usuarioRepositorio = usuarioRepositorio;
         this.passwordEncoder = passwordEncoder;
+
     }
 
     @Transactional
@@ -147,21 +153,99 @@ public class UsuarioServicio {
         return usuarioRepositorio.save(usuario);
     }
 
-    @Transactional
-    public void cambiarContrasena(Long usuarioId, String contrasenaActual, String nuevaContrasena) {
-        Usuario usuario = buscarPorId(usuarioId)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        // Si se proporciona contraseña actual, verificarla (caso de usuario normal)
-        if (contrasenaActual != null) {
-            if (!passwordEncoder.matches(contrasenaActual, usuario.getContrasenaHash())) {
-                throw new RuntimeException("Contraseña actual incorrecta");
+
+    /**
+     * Actualiza la información de un usuario según su DTO
+     */
+    @Transactional
+    public Usuario actualizarUsuarioDesdeDTO(Long id, UsuarioDTO usuarioDTO) {
+        // Verificar que el usuario existe
+        Usuario usuario = buscarPorId(id)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        // Verificar permisos usando los métodos internos
+        boolean isAdmin = isUsuarioActualAdmin();
+        boolean isCurrentUser = isUsuarioActual(id);
+
+        if (!isAdmin && !isCurrentUser) {
+            throw new SecurityException("No tiene permisos para actualizar este usuario");
+        }
+
+        // Actualizar según el rol del solicitante
+        if (!isAdmin && isCurrentUser) {
+            // Usuario normal actualizando su propia información
+            return actualizarUsuario(id, usuarioDTO.getNombre(), usuarioDTO.getEmail());
+        } else {
+            // Administrador actualizando cualquier usuario
+            return actualizarUsuarioCompleto(
+                    id,
+                    usuarioDTO.getNombre(),
+                    usuarioDTO.getEmail(),
+                    usuarioDTO.getRol(),
+                    usuarioDTO.getEstado());
+        }
+    }
+
+    /**
+     * Cambia la contraseña de un usuario según su DTO
+     */
+    @Transactional
+    public Usuario cambiarContrasena(Long id, CambioContrasenaDTO cambioContrasenaDTO) {
+        // Validar contraseñas
+        if (!cambioContrasenaDTO.getNuevaContrasena().equals(cambioContrasenaDTO.getConfirmacionContrasena())) {
+            throw new IllegalArgumentException("Las contraseñas no coinciden");
+        }
+
+        // Verificar que el usuario existe
+        Usuario usuario = buscarPorId(id)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        // Verificar permisos usando los métodos internos
+        boolean isAdmin = isUsuarioActualAdmin();
+        boolean isCurrentUser = isUsuarioActual(id);
+
+        if (!isAdmin && !isCurrentUser) {
+            throw new SecurityException("No tiene permisos para cambiar la contraseña de este usuario");
+        }
+
+        // Para usuarios normales, exigir y validar la contraseña actual
+        if (!isAdmin && isCurrentUser) {
+            if (cambioContrasenaDTO.getContrasenaActual() == null || cambioContrasenaDTO.getContrasenaActual().isEmpty()) {
+                throw new IllegalArgumentException("La contraseña actual es requerida");
+            }
+
+            // Verificar que la contraseña actual sea correcta
+            if (!passwordEncoder.matches(cambioContrasenaDTO.getContrasenaActual(), usuario.getContrasenaHash())) {
+                throw new IllegalArgumentException("La contraseña actual es incorrecta");
             }
         }
-        // Si no se proporciona contraseña actual, asumimos que es un admin quien llama
 
         // Actualizar la contraseña
-        usuario.setContrasenaHash(passwordEncoder.encode(nuevaContrasena));
-        usuarioRepositorio.save(usuario);
+        usuario.setContrasenaHash(passwordEncoder.encode(cambioContrasenaDTO.getNuevaContrasena()));
+        return usuarioRepositorio.save(usuario);
     }
+
+    public Usuario obtenerUsuarioActual() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        return buscarPorEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+    }
+
+    public Long obtenerIdUsuarioActual() {
+        return obtenerUsuarioActual().getId();
+    }
+
+    public boolean isUsuarioActualAdmin() {
+        Usuario usuario = obtenerUsuarioActual();
+        return "admin".equalsIgnoreCase(usuario.getRol());
+    }
+
+    public boolean isUsuarioActual(Long id) {
+        return id.equals(obtenerIdUsuarioActual());
+    }
+
+
+
 }

@@ -2,6 +2,7 @@ package org.example.recuperaciondiwbackend.controladores;
 
 import jakarta.validation.Valid;
 import org.example.recuperaciondiwbackend.Utils.SecurityUtils;
+import org.example.recuperaciondiwbackend.dtos.CambioContrasenaDTO;
 import org.example.recuperaciondiwbackend.dtos.UsuarioDTO;
 import org.example.recuperaciondiwbackend.modelos.Usuario;
 import org.example.recuperaciondiwbackend.servicios.UsuarioServicio;
@@ -55,73 +56,42 @@ public class AdminUsuarioControlador {
         return ResponseEntity.ok(new UsuarioDTO(usuarioActualizado));
     }
 
-    //Este método es demasiado largo, seguro puede ser refactorizado
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or @securityUtils.obtenerIdUsuarioActual() == #id")
     public ResponseEntity<UsuarioDTO> actualizarUsuario(
             @PathVariable Long id,
             @Valid @RequestBody UsuarioDTO usuarioDTO) {
 
-        // Verificar si hay solicitud de cambio de contraseña
-        boolean cambioContrasena = (usuarioDTO.getNuevaContrasena() != null && !usuarioDTO.getNuevaContrasena().isEmpty());
-
-        // Si hay solicitud de cambio de contraseña, procesar primero
-        if (cambioContrasena) {
-            boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
-                    .contains(new SimpleGrantedAuthority("ROLE_ADMIN"));
-            boolean isCurrentUser = id.equals(securityUtils.obtenerIdUsuarioActual());
-
-            // Si es el propio usuario (y no es admin), verificar contraseña actual
-            if (isCurrentUser && !isAdmin) {
-                // Verificar contraseña actual
-                if (usuarioDTO.getContrasenaActual() == null || usuarioDTO.getContrasenaActual().isEmpty()) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La contraseña actual es requerida");
-                }
-            } else if (!isAdmin && !isCurrentUser) {
-                // No es ni admin ni el propio usuario
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(null);
-            }
-
-            try {
-                // Si es admin, la contraseña actual puede ser null
-                // Si es usuario normal, ya verificamos que la contraseña actual existe
-                usuarioServicio.cambiarContrasena(
-                        id,
-                        isAdmin ? null : usuarioDTO.getContrasenaActual(),
-                        usuarioDTO.getNuevaContrasena()
-                );
-            } catch (RuntimeException e) {
-                // Si falla el cambio de contraseña, devolver el error
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
-            }
+        try {
+            Usuario usuarioActualizado = usuarioServicio.actualizarUsuarioDesdeDTO(id, usuarioDTO);
+            return ResponseEntity.ok(new UsuarioDTO(usuarioActualizado));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al actualizar usuario");
         }
+    }
 
-        // Procesar actualización de información
-        Usuario usuarioActualizado;
+    /**
+     * Endpoint para cambiar la contraseña de un usuario
+     */
+    @PutMapping("/{id}/password")
+    @PreAuthorize("hasRole('ADMIN') or @securityUtils.obtenerIdUsuarioActual() == #id")
+    public ResponseEntity<UsuarioDTO> cambiarContrasena(
+            @PathVariable Long id,
+            @Valid @RequestBody CambioContrasenaDTO cambioContrasenaDTO) {
 
-        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
-                .contains(new SimpleGrantedAuthority("ROLE_ADMIN"));
-        boolean isCurrentUser = id.equals(securityUtils.obtenerIdUsuarioActual());
-
-        // Los usuarios normales solo pueden actualizar nombre y email de su propia cuenta
-        if (!isAdmin && !isCurrentUser) {
-            // Si no es admin ni el propio usuario, no tiene permiso
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(null);
-        } else if (!isAdmin && isCurrentUser) {
-            // Si es el propio usuario pero no es admin, solo puede actualizar nombre y email
-            usuarioActualizado = usuarioServicio.actualizarUsuario(id, usuarioDTO.getNombre(), usuarioDTO.getEmail());
-        } else {
-            // Si es admin, permitir actualizar todos los campos
-            usuarioActualizado = usuarioServicio.actualizarUsuarioCompleto(
-                    id,
-                    usuarioDTO.getNombre(),
-                    usuarioDTO.getEmail(),
-                    usuarioDTO.getRol(),
-                    usuarioDTO.getEstado());
+        try {
+            Usuario usuarioActualizado = usuarioServicio.cambiarContrasena(id, cambioContrasenaDTO);
+            return ResponseEntity.ok(new UsuarioDTO(usuarioActualizado));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al cambiar contraseña");
         }
-
-        return ResponseEntity.ok(new UsuarioDTO(usuarioActualizado));
     }
 }

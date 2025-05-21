@@ -17,10 +17,7 @@ public class SecurityUtils {
     }
 
     public Usuario obtenerEntidadUsuarioActual() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String email = auth.getName();
-        return usuarioServicio.buscarPorEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        return usuarioServicio.obtenerUsuarioActual();
     }
 
     public UsuarioDTO obtenerUsuarioActualDTO() {
@@ -29,6 +26,6 @@ public class SecurityUtils {
     }
 
     public Long obtenerIdUsuarioActual() {
-        return obtenerEntidadUsuarioActual().getId();
+        return usuarioServicio.obtenerIdUsuarioActual();
     }
 }
